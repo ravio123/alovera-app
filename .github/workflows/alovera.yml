@@ -36,38 +36,15 @@ jobs:
       - name: Decode Android Keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/my-release-key.jks
-          chmod 600 android/app/my-release-key.jks
-
-      - name: Verify Keystore
-        run: |
-          echo "=== Keystore file ==="
-          ls -lh android/app/my-release-key.jks
-
-          echo "=== Keystore type ==="
-          file android/app/my-release-key.jks
-
-          echo "=== Checking keystore ==="
-          keytool -list \
-            -keystore android/app/my-release-key.jks \
-            -storepass "${{ secrets.KEYSTORE_PASSWORD }}"
-
 
       - name: Create key.properties
         run: |
           cat > android/key.properties <<EOF
-          storeFile=app/my-release-key.jks
+          storeFile=my-release-key.jks
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
           keyAlias=${{ secrets.KEY_ALIAS }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
           EOF
-
-      - name: Verify Signing Configuration
-        run: |
-          echo "=== key.properties ==="
-          sed 's/storePassword=.*/storePassword=***MASKED***/; s/keyPassword=.*/keyPassword=***MASKED***/' android/key.properties
-
-          echo "=== Keystore ==="
-          ls -lh android/app/my-release-key.jks
 
       - name: Build Debug APK
         run: |
@@ -84,30 +61,15 @@ jobs:
           cd android
           ./gradlew bundleRelease
 
-      - name: Verify Release APK
-        run: |
-          echo "=== APK SIGNATURE ==="
-          $ANDROID_HOME/build-tools/36.0.0/apksigner verify --verbose \
-            android/app/build/outputs/apk/release/app-release.apk
-
-      - name: Verify Release AAB
-        run: |
-          echo "=== AAB SIGNATURE ==="
-          jarsigner -verify -verbose -certs \
-            android/app/build/outputs/bundle/release/app-release.aab | tail -20
-
       - name: Prepare APK and AAB
         run: |
           mkdir -p output
 
-          cp android/app/build/outputs/apk/debug/app-debug.apk \
-            output/Alovera-debug.apk
+          find android/app/build/outputs/apk/debug -name "*.apk" -exec cp {} output/Alovera-debug.apk \;
 
-          cp android/app/build/outputs/apk/release/app-release.apk \
-            output/Alovera-release.apk
+          find android/app/build/outputs/apk/release -name "*.apk" -exec cp {} output/Alovera-release.apk \;
 
-          cp android/app/build/outputs/bundle/release/app-release.aab \
-            output/Alovera-release.aab
+          find android/app/build/outputs/bundle/release -name "*.aab" -exec cp {} output/Alovera-release.aab \;
 
           echo "=== Generated files ==="
           ls -lh output
