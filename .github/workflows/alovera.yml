@@ -40,11 +40,17 @@ jobs:
 
       - name: Verify Keystore
         run: |
+          echo "=== Keystore file ==="
+          ls -lh android/app/my-release-key.jks
+
+          echo "=== Keystore type ==="
+          file android/app/my-release-key.jks
+
+          echo "=== Checking keystore ==="
           keytool -list \
             -keystore android/app/my-release-key.jks \
-            -alias "${{ secrets.KEY_ALIAS }}" \
-            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
-            -v | grep -E "Alias name:|SHA256:"
+            -storepass "${{ secrets.KEYSTORE_PASSWORD }}"
+
 
       - name: Create key.properties
         run: |
