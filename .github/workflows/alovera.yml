@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build APK
+    name: Build Alovera APK & AAB
     runs-on: ubuntu-latest
 
     steps:
@@ -33,13 +33,53 @@ jobs:
       - name: Sync Capacitor Android
         run: npx cap sync android
 
+      - name: Decode Android Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/my-release-key.jks
+
+      - name: Create key.properties
+        run: |
+          cat > android/key.properties <<EOF
+          storeFile=my-release-key.jks
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          EOF
+
       - name: Build Debug APK
         run: |
           cd android
           ./gradlew assembleDebug
 
-      - name: Upload APK
+      - name: Build Release APK
+        run: |
+          cd android
+          ./gradlew assembleRelease
+
+      - name: Build Release AAB
+        run: |
+          cd android
+          ./gradlew bundleRelease
+
+      - name: Rename APK
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk \
+             android/app/build/outputs/apk/debug/Alovera-debug.apk
+
+          cp android/app/build/outputs/apk/release/app-release.apk \
+             android/app/build/outputs/apk/release/Alovera-release.apk
+
+      - name: Upload APK and AAB
         uses: actions/upload-artifact@v4
         with:
-          name: alovera-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: Alovera-Android
+          path: |
+            android/app/build/outputs/apk/debug/Alovera-debug.apk
+            android/app/build/outputs/apk/release/Alovera-release.apk
+            android/app/build/outputs/bundle/release/app-release.aab
+
+      - name: Clean signing files
+        if: always()
+        run: |
+          rm -f android/app/my-release-key.jks
+          rm -f android/key.properties
